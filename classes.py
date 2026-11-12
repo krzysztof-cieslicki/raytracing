@@ -1,6 +1,6 @@
-import numpy as np
 from numpy import atan2, cos, sin, asin, linspace
 from scipy.optimize import fsolve
+from types import FunctionType
 
 
 class Surface:
@@ -27,10 +27,10 @@ class Surface:
         l = 0
         if self.__r is None: return k, l
         if y0 > self.__a/2: raise ValueError(f"Surface {self.__no}: Ray does not impact surface")
-        theta = -asin(y0/self.__r, dtype=np.float64)
+        theta = -asin(y0/self.__r)
         # kąt między promomieniem a osią Z
-        k = cos(theta, dtype=np.float64)
-        l = sin(theta, dtype=np.float64)
+        k = cos(theta)
+        l = sin(theta)
         # nie mam pojęcia czy to będzie działać
         return k, l
 
@@ -51,8 +51,12 @@ class Surface:
         return self.__r
 
     def get_n(self, wavelength=None):
-        try: return self.__n(wavelength)
-        except TypeError: return self.__n
+        if wavelength is None: return self.__n
+
+        if isinstance(self.__n, FunctionType) is True:
+            return self.__n(wavelength)
+
+        return self.__n
 
 
     def set_thickness(self, thickness):
@@ -64,8 +68,8 @@ class Ray:
     def __init__(self, k=None, l=None, y=None, z=None, *, u=None):
         self.__u = u if u is not None else 0
         if u is not None:
-            self.__k = cos(u, dtype=np.float64)
-            self.__l = sin(u, dtype=np.float64)
+            self.__k = cos(u)
+            self.__l = sin(u)
             self.__u = u
         else:
             if k**2 + l**2 > 1:
@@ -82,6 +86,10 @@ class Ray:
         # wysokość początkowa [mm]
         self.__z1 = z if z is not None else 0
         # położenie punktu początkowego na osi [mm]
+        self.__y2 = self.__y1
+        # wysokość końcowa [mm]
+        self.__z2 = self.__z1
+        # położenie punktu końcowego na osi [mm]
         self.__length = 0
         # długość drogi propagacji [mm]
         self.__optical_length = 0
@@ -109,6 +117,7 @@ class Ray:
         return k_new, l_new
 
     def find_intercept(self, origin:Surface, destination:Surface):
+
         thickness = origin.get_th()
         radius = destination.get_radius()
 
@@ -124,20 +133,10 @@ class Ray:
         else:
             self.__length = fsolve(lambda T: z(T) - thickness, x0=thickness)[0]
 
-        z2 = z(self.__length)
-        y2 = y(self.__length)
+        self.__z2 = z(self.__length)
+        self.__y2 = y(self.__length)
 
-        return z2-thickness, y2
-
-    def ray_parameters(self):
-        return self.__z1, self.__y1, self.__k, self.__l, self.__length
-
-    def set_ray_parameters(self, z, y, k, l, length):
-        self.__z1 = z
-        self.__y1 = y
-        self.__k = k
-        self.__l = l
-        self.__length = length
+        return self.__z2-thickness, self.__y2
 
     def propagate(self, origin:Surface, destination:Surface, wavelength=None):
         z2, y2 = self.find_intercept(origin, destination)
@@ -145,11 +144,13 @@ class Ray:
         return Ray(k=k_new, l=l_new, y=y2, z=z2)
 
     def draw_ray(self, z0):
+
         z1 = self.__z1 + z0
-        z2 = self.__z1 + z0 + self.__k*self.__length
+        z2 = self.__z2 + z0
 
         y1 = self.__y1
-        y2 = self.__y1 + self.__l*self.__length
+        y2 = self.__y2
+
         return (z1, z2), (y1, y2)
 
     def autofocus(self):
