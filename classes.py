@@ -1,7 +1,6 @@
 import numpy as np
 from numpy import atan2, cos, sin, asin, linspace
 from scipy.optimize import fsolve
-import matplotlib.pyplot as plt
 
 
 class Surface:
@@ -59,8 +58,6 @@ class Surface:
     def set_thickness(self, thickness):
         self.__th = thickness
 
-    def do_draw(self):
-        return self.__draw
 
 
 class Ray:
@@ -90,7 +87,9 @@ class Ray:
         self.__optical_length = 0
         # droga optyczna [mm]
 
-    def __refraction(self, yi, wavelength, origin:Surface, incident:Surface):
+    def refraction(self, yi, wavelength, origin:Surface, incident:Surface):
+
+        if wavelength is None: wavelength = 0.555
 
         k0, l0 = incident.find_normal_cosine(yi)
         n = origin.get_n(wavelength)
@@ -109,6 +108,27 @@ class Ray:
 
         return k_new, l_new
 
+    def find_intercept(self, origin:Surface, destination:Surface):
+        thickness = origin.get_th()
+        radius = destination.get_radius()
+
+        z = lambda T: self.__z1 + self.__k * T
+        y = lambda T: self.__y1 + self.__l * T
+        self.__length = thickness - self.__z1
+
+        if radius is not None:
+            self.__length = fsolve(lambda T: 2 * radius * (z(T) - thickness) -
+                                             (z(T) - thickness) ** 2 -
+                                             y(T) ** 2, x0=thickness, maxfev=500)[0]
+
+        else:
+            self.__length = fsolve(lambda T: z(T) - thickness, x0=thickness)[0]
+
+        z2 = z(self.__length)
+        y2 = y(self.__length)
+
+        return z2-thickness, y2
+
     def ray_parameters(self):
         return self.__z1, self.__y1, self.__k, self.__l, self.__length
 
@@ -120,27 +140,9 @@ class Ray:
         self.__length = length
 
     def propagate(self, origin:Surface, destination:Surface, wavelength=None):
-        if wavelength is None: wavelength = 0.555
-        thickness = origin.get_th()
-        radius = destination.get_radius()
-
-        z = lambda T: self.__z1 + self.__k*T
-        y = lambda T: self.__y1 + self.__l*T
-        self.__length = thickness-self.__z1
-
-        if radius is not None:
-            self.__length = fsolve(lambda T: 2*radius*(z(T)-thickness) -
-                                             (z(T)-thickness)**2 -
-                                             y(T)**2, x0=thickness, maxfev=500)[0]
-
-        else:
-            self.__length = fsolve(lambda T: z(T) - thickness, x0=thickness)[0]
-
-        z2 = z(self.__length)
-        y2 = y(self.__length)
-
-        k_new, l_new = self.__refraction(y2, wavelength, origin, destination)
-        return Ray(k=k_new, l=l_new, y=y2, z=z2-thickness)
+        z2, y2 = self.find_intercept(origin, destination)
+        k_new, l_new = self.refraction(y2, wavelength, origin, destination)
+        return Ray(k=k_new, l=l_new, y=y2, z=z2)
 
     def draw_ray(self, z0):
         z1 = self.__z1 + z0
@@ -163,34 +165,43 @@ class Ray:
 
 class Chief(Ray):
 
-    def __init__(self, obj_height=None, entry_pupil_dist=None):
-        if obj_height is None: obj_height = 0
-        if entry_pupil_dist is None: entry_pupil_dist = 1
-        u = -atan2(obj_height, entry_pupil_dist)
-        y = obj_height
-        super().__init__(u=u, y=y)
+    def __init__(self, obj_height=None, entry_pupil_dist=None, *, k=None, l=None, y=None, z=None):
+        if k is None:
+            if obj_height is None: obj_height = 0
+            if entry_pupil_dist is None: entry_pupil_dist = 1
+            u = -atan2(obj_height, entry_pupil_dist)
+            y = obj_height
+            super(Chief, self).__init__(u=u, y=y, z=z)
+        else:
+            super(Chief, self).__init__(k=k, l=l, y=y, z=z)
 
     def image_height(self, marginal:Marginal):
         dz = marginal.autofocus()
         return super().height(dz)
 
     def propagate(self, origin:Surface, destination:Surface, wavelength=None):
-        ray = super().propagate(origin, destination, wavelength)
-        ray_new = Chief()
-        ray_new.set_ray_parameters(*ray.ray_parameters())
-        return ray_new
+        z2, y2 = super(Chief, self).find_intercept(origin, destination)
+        k_new, l_new = super(Chief, self).refraction(y2, wavelength, origin, destination)
+        return Chief(k=k_new, l=l_new, y=y2, z=z2)
 
 
 class Marginal(Ray):
 
-    def __init__(self, entry_pupil_dia=None, entry_pupil_dist=None):
-        y = entry_pupil_dia/2 if entry_pupil_dia is not None else 0.01
-        if entry_pupil_dist is None:
-            u = 0
+    def __init__(self, entry_pupil_dia=None, entry_pupil_dist=None, *, k=None, l=None, y=None, z=None):
+        if k is None:
+            y = entry_pupil_dia/2 if entry_pupil_dia is not None else 0.01
+            if entry_pupil_dist is None: u = 0
+            else:
+                u = atan2(entry_pupil_dia/2, entry_pupil_dist)
+                y = 0
+            super(Marginal, self).__init__(u=u, y=y, z=z)
         else:
-            u = atan2(entry_pupil_dia/2, entry_pupil_dist)
-            y = 0
-        super().__init__(u=u, y=y)
+            super(Marginal, self).__init__(k=k, l=l, y=y, z=z)
+
+    def propagate(self, origin:Surface, destination:Surface, wavelength=None):
+        z2, y2 = super(Marginal, self).find_intercept(origin, destination)
+        k_new, l_new = super(Marginal, self).refraction(y2, wavelength, origin, destination)
+        return Marginal(k=k_new, l=l_new, y=y2, z=z2)
 
 
 def draw_system(ax, *args):
