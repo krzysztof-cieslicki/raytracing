@@ -1,4 +1,4 @@
-from numpy import atan2, cos, sin, asin, linspace
+from numpy import atan2, cos, sin, asin, linspace, sign
 from scipy.optimize import fsolve
 from types import FunctionType
 
@@ -37,11 +37,7 @@ class Surface:
     def draw(self, z0):
         if self.__r is None: return (z0, z0), (-self.__a/2, self.__a/2)
         y = linspace(-self.__a/2, self.__a/2)
-        if self.__r > 0:
-            z = self.__r - (self.__r ** 2 - y ** 2) ** (1/2)
-        else:
-            z = self.__r + (self.__r ** 2 - y ** 2) ** (1/2)
-        z += z0
+        z = self.__r + z0 - sign(self.__r) * (self.__r ** 2 - y ** 2) ** (1/2)
         return z, y
 
     def get_th(self):
