@@ -28,7 +28,7 @@ class Surface:
         if self.__r is None: return k, l
         if y0 > self.__a/2: raise ValueError(f"Surface {self.__no}: Ray does not impact surface")
         theta = -asin(y0/self.__r)
-        # kąt między promomieniem a osią Z
+        # kąt między promieniem a osią Z
         k = cos(theta)
         l = sin(theta)
         # nie mam pojęcia czy to będzie działać
