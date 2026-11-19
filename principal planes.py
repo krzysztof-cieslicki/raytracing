@@ -30,7 +30,5 @@ principal_shift = fsolve(lambda dz: ray.height(dz)-y0, x0=-z)[0]
 plt.plot((z, z+principal_shift), (ray.height(0), ray.height(principal_shift)), color='C3', linestyle='--', zorder=10)
 plt.plot((0, z+principal_shift), (y0, y0), color='C3', linestyle='--', zorder=10)
 plt.plot((z+principal_shift, z+principal_shift), (-3, 3), color='k', zorder=10, linestyle='--')
-print(ray.height(0))
-print(principal_shift)
 ax1.grid()
 plt.show()
