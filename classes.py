@@ -23,14 +23,13 @@ class Surface:
         return f"Surface {self.__no}"
 
     def find_normal_cosine(self, y0):
-        k = 1
-        l = 0
+        k = 0
+        l = 1
         if self.__r is None: return k, l
         if y0 > self.__a/2: raise ValueError(f"Surface {self.__no}: Ray does not impact surface")
-        theta = -asin(y0/self.__r)
         # kąt między promieniem a osią Z
-        k = cos(theta)
-        l = sin(theta)
+        k = -y0/self.__r
+        l = (1-k**2)**(1/2) * sign(y0)
         # nie mam pojęcia czy to będzie działać
         return k, l
 
@@ -64,8 +63,8 @@ class Ray:
     def __init__(self, k=None, l=None, y=None, z=None, *, u=None):
         self.__u = u if u is not None else 0
         if u is not None:
-            self.__k = cos(u)
-            self.__l = sin(u)
+            self.__k = sin(u)
+            self.__l = cos(u)
             self.__u = u
         else:
             if k**2 + l**2 > 1:
@@ -103,7 +102,7 @@ class Ray:
 
         cosi = k0*self.__k + l0*self.__l
         cosip = (1-(((1-cosi**2) * n/np)**2)) ** (1/2)
-        #pass
+        pass
         k_new = n*self.__k + (np*cosip - n*cosi) * k0
         l_new = n*self.__l + (np*cosip - n*cosi) * l0
 
@@ -117,18 +116,18 @@ class Ray:
         thickness = origin.get_th()
         radius = destination.get_radius()
 
-        z = lambda T: self.__z1 + self.__k * T
-        y = lambda T: self.__y1 + self.__l * T
-        self.__length = thickness - self.__z1
+        z = lambda T: self.__z1 + self.__l * T
+        y = lambda T: self.__y1 + self.__k * T
 
         if radius is not None:
             self.__length = fsolve(lambda T: 2 * radius * (z(T) - thickness) -
                                              (z(T) - thickness) ** 2 -
-                                             y(T) ** 2, x0=thickness, maxfev=500)[0]
+                                             y(T) ** 2, x0=thickness, maxfev=500)
 
         else:
-            self.__length = fsolve(lambda T: z(T) - thickness, x0=thickness)[0]
+            self.__length = fsolve(lambda T: z(T) - thickness, x0=thickness)
 
+        self.__length = self.__length[0]
         self.__z2 = z(self.__length)
         self.__y2 = y(self.__length)
 
@@ -150,13 +149,13 @@ class Ray:
         return (z1, z2), (y1, y2)
 
     def autofocus(self):
-        y = lambda T: self.__y1 + self.__l*T
+        y = lambda T: self.__y1 + self.__k*T
         t = fsolve(y, x0=0)[0]
-        return self.__k*t
+        return self.__l*t
 
     def height(self, dz):
-        dt = dz/self.__k
-        return self.__y1+dt*self.__l
+        dt = dz/self.__l
+        return self.__y1+dt*self.__k
 
 
 
