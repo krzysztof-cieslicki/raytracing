@@ -1,4 +1,5 @@
-from classes import Ray, Surface, draw_system
+from classes import Ray, Surface
+from draw_utils import draw_system
 from numpy import linspace
 import matplotlib.pyplot as plt
 
