@@ -1,4 +1,4 @@
-from numpy import atan2, cos, sin, asin, linspace, sign
+from numpy import atan2, cos, sin, linspace, sign
 from scipy.optimize import fsolve
 from types import FunctionType
 
@@ -29,7 +29,7 @@ class Surface:
         if y0 > self.__a/2: raise ValueError(f"Surface {self.__no}: Ray does not impact surface")
         # kąt między promieniem a osią Z
         k = -y0/self.__r
-        l = (1-k**2)**(1/2) * sign(y0)
+        l = (1-k**2)**(1/2)
         # nie mam pojęcia czy to będzie działać
         return k, l
 
@@ -38,9 +38,6 @@ class Surface:
         y = linspace(-self.__a/2, self.__a/2)
         z = self.__r + z0 - sign(self.__r) * (self.__r ** 2 - y ** 2) ** (1/2)
         return z, y
-
-    def get_th(self):
-        return self.__th
 
     def get_radius(self):
         return self.__r
@@ -53,10 +50,11 @@ class Surface:
 
         return self.__n
 
-
     def set_thickness(self, thickness):
         self.__th = thickness
 
+    def get_th(self):
+        return self.__th
 
 
 class Ray:
@@ -101,7 +99,7 @@ class Ray:
         self.__optical_length = self.__length * n
 
         cosi = k0*self.__k + l0*self.__l
-        cosip = (1-(((1-cosi**2) * n/np)**2)) ** (1/2)
+        cosip = (1-((1-cosi**2) * (n/np)**2)) ** (1/2)
         pass
         k_new = n*self.__k + (np*cosip - n*cosi) * k0
         l_new = n*self.__l + (np*cosip - n*cosi) * l0
@@ -120,14 +118,14 @@ class Ray:
         y = lambda T: self.__y1 + self.__k * T
 
         if radius is not None:
-            self.__length = fsolve(lambda T: 2 * radius * (z(T) - thickness) -
+            length = fsolve(lambda T: 2 * radius * (z(T) - thickness) -
                                              (z(T) - thickness) ** 2 -
                                              y(T) ** 2, x0=thickness, maxfev=500)
 
         else:
-            self.__length = fsolve(lambda T: z(T) - thickness, x0=thickness)
+            length = fsolve(lambda T: z(T) - thickness, x0=thickness)
 
-        self.__length = self.__length[0]
+        self.__length = length[0]
         self.__z2 = z(self.__length)
         self.__y2 = y(self.__length)
 
@@ -156,7 +154,6 @@ class Ray:
     def height(self, dz):
         dt = dz/self.__l
         return self.__y1+dt*self.__k
-
 
 
 class Chief(Ray):
@@ -200,12 +197,6 @@ class Marginal(Ray):
         return Marginal(k=k_new, l=l_new, y=y2, z=z2)
 
 
-def draw_system(ax, *args):
-    z = 0
-    for surf in args:
-        if surf.visible is True: ax.plot(*surf.draw(z), color='k', zorder=50)
-        z += surf.get_th()
-    return ax
 
 
 def main():
