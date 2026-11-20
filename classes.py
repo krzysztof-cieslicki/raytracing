@@ -72,7 +72,7 @@ class Ray:
 
             self.__k = k
             self.__l = l
-            self.__u = atan2(l,k)
+            self.__u = atan2(k,l)
 
         # cos kierunkowe
         self.__y1 = y if y is not None else 0

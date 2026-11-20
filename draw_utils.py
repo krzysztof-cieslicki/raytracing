@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 def draw_system(ax, *args):
     z = 0
     for surf in args:
@@ -8,19 +10,20 @@ def draw_system(ax, *args):
 def propagate_rays(rays, surfs, wavelength=None, *, ax=None, focus=None):
     z = 0
     no = len(surfs)
-    try:
-        rays[0] is not None
-    except TypeError:
-        rays = [rays]
+    for i in range(no-1):
+        try:
+            rays_new = [ray.propagate(surfs[i], surfs[i+1], wavelength) for ray in rays]
+        except TypeError:
+            rays_new = rays.propagate(surfs[i], surfs[i+1], wavelength)
 
-    for i in range(no-2):
-        rays_new = [ray.propagate(surfs[i], surfs[i+1], wavelength) for ray in rays]
         if ax is not None:
-            for ray in rays: ax.plot(*ray.draw_ray(z), color="C3", linestyle="-", linewidth=1, marker=".")
+            try:
+                for ray in rays: ax.plot(*ray.draw_ray(z), color="C3", linestyle="-", linewidth=1, marker=".")
+            except TypeError:
+                ax.plot(*rays.draw_ray(z), color="C3", linestyle="-", linewidth=1, marker=".")
         z += surfs[i].get_th()
         rays = rays_new
 
-    if ax is None: return rays
-    return rays, ax
+    return rays, z
 
 

@@ -1,4 +1,5 @@
-from classes import Marginal, Surface, draw_system, Ray
+from classes import Marginal, Surface, Ray
+from draw_utils import draw_system
 from materials import K7, F5
 import matplotlib.pyplot as plt
 from numpy import linspace, tan

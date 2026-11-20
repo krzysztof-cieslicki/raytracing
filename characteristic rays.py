@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
-from classes import Surface, Chief, Marginal, draw_system
+from classes import Surface, Chief, Marginal
+from draw_utils import draw_system
 from materials import K7, F5
 
 fig, ax = plt.subplots(layout="tight", figsize=(15,3))

@@ -1,4 +1,5 @@
-from classes import Ray, Surface, draw_system
+from classes import Ray, Surface
+from draw_utils import draw_system, propagate_rays
 from numpy import linspace
 import matplotlib.pyplot as plt
 
@@ -19,13 +20,8 @@ surfs = (OBJ, L11, L12, L21, L22, L31, L32, IMG)
 no = len(surfs)
 heights = linspace(-aperture, aperture, 6)/2
 rays = [Ray(u=0, y=y) for y in heights]
-z = 0
-draw_system(ax, *surfs)
 
-for i in range(no-1):
-    new_rays = [ray.propagate(surfs[i], surfs[i+1]) for ray in rays]
-    for ray in rays: ax.plot(*ray.draw_ray(z), color='r')
-    rays = new_rays
-    z+= surfs[i].get_th()
+draw_system(ax, *surfs)
+rays, z = propagate_rays(rays, surfs, ax=ax)
 
 plt.show()
