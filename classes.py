@@ -155,6 +155,9 @@ class Ray:
         dt = dz/self.__l
         return self.__y1+dt*self.__k
 
+    def get_optical_length(self):
+        return self.__optical_length
+
 
 class Chief(Ray):
 

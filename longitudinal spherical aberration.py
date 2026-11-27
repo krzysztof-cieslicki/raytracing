@@ -2,14 +2,22 @@ from classes import Marginal, Surface, Ray
 from draw_utils import draw_system
 from materials import K7, F5
 import matplotlib.pyplot as plt
-from numpy import linspace
+from numpy import linspace, zeros_like, pi
+
+def optical_length_to_wavefront(optical_path_arr, wavelength=None):
+    if wavelength is None: wavelength = 0.555
+    optical_path_arr *= 2*pi*1e3/wavelength # mm to um conversion
 
 
-fig, ax = plt.subplots(layout="tight", figsize=(12,2))
+
+
+fig, ax = plt.subplots(layout="tight")
 fig2, ax2 = plt.subplots(layout="tight", figsize=(3,6))
-ax.set_aspect("equal")
-ax2.grid()
+fig3, ax3 = plt.subplots(layout="tight", figsize=(3,6))
+#ax.set_aspect("equal")
 ax.grid()
+ax2.grid()
+ax3.grid()
 
 OBJ = Surface(thickness=400, surface=1, visible=False)
 surf1 = Surface(thickness=5, n=1.5, aperture=35, surface=2)
@@ -17,23 +25,30 @@ surf2 = Surface(radius=-100, thickness=10, aperture=35, surface=3)
 IMG = Surface(surface=4, visible=True)
 surfs = (OBJ, surf1, surf2, IMG)
 heights = linspace(0.01, 10, 20)
+optical_length = zeros_like(heights)
 
 rays = [Marginal(entry_pupil_dia=height*2, entry_pupil_dist=400) for height in heights]
 z=0
 for i in range(len(surfs)-2):
-    rays_new = [ray.propagate(surfs[i], surfs[i+1], 0.555) for ray in rays]
+    rays_new = [ray.propagate(surfs[i], surfs[i+1]) for ray in rays]
+    for n in range(len(rays)): optical_length[n] += rays[n].get_optical_length()
     z += surfs[i].get_th()
     rays = rays_new
 
+optical_length = optical_length-optical_length[0]
+print(optical_length)
 focal_shift = []
 ray_intercept = []
 img_plane = rays[0].autofocus()
 surfs[-2].set_thickness(img_plane)
 draw_system(ax, *surfs)
 print(img_plane)
-rays_new = [ray.propagate(surfs[-2], surfs[-1], 0.555) for ray in rays]
+rays_new = [ray.propagate(surfs[-2], surfs[-1]) for ray in rays]
 rays = rays_new
-for ray in rays: focal_shift.append(ray.autofocus())
+for ray in rays:
+    focal_shift.append(ray.autofocus())
+    ray_intercept.append(ray.height(0))
+
 rays = [Marginal(entry_pupil_dia=10*2*field, entry_pupil_dist=400) for field in (-1, -0.7, -0.3, 1, 0.7, 0.3)]
 z=0
 for i in range(len(surfs)-1):
@@ -43,8 +58,13 @@ for i in range(len(surfs)-1):
     z += surfs[i].get_th()
     rays = rays_new
 
-ax2.set_ylabel(r"Fractional pupil radius", fontweight="bold", fontsize=14)
-ax2.set_xlabel(r"Focal shift (mm)", fontweight="bold", fontsize=14)
+ax2.set_ylabel(r"y (mm)", fontweight="bold", fontsize=14)
+ax2.set_xlabel(r"$\bf\Delta s$' (mm)", fontweight="bold", fontsize=14)
 ax2.tick_params(axis="both", labelsize=12)
-ax2.plot(focal_shift, heights/10)
+ax2.plot(focal_shift, heights)
+
+ax3.plot(heights, ray_intercept, color="C3", linewidth=2)
+ax3.set_xlabel(r"y (mm)", fontweight="bold", fontsize=14)
+ax3.set_ylabel(r"$\bf\Delta y$' (mm)", fontweight="bold", fontsize=14)
+ax3.tick_params(axis="both", labelsize=12)
 plt.show()
